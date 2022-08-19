@@ -3,7 +3,7 @@ from typing import Dict, Type
 
 from .base import BasePubsub
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def int_or_str(value):
@@ -30,7 +30,7 @@ else:
 
 
 class Pubsub:
-    REDIS = PUBSUB_CACHES.get("backend")
+    REDIS = PUBSUB_CACHES[RedisPubsub.NAME]
 
     def __new__(cls, pubsub_class=REDIS, **kwargs):
         if not issubclass(pubsub_class, BasePubsub):

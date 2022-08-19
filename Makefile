@@ -29,5 +29,4 @@ dist: clean
 	$(PYTHON) setup.py sdist bdist_wheel
 
 clean:
-	-rm -r docs/build
-	-rm -r build dist aioredis.egg-info
+	-rm -r build dist aiopubsub_py3.egg-info

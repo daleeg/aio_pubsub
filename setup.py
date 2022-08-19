@@ -40,7 +40,7 @@ classifiers = [
 ]
 
 setup(
-    name="aiopubsub",
+    name="aiopubsub-py3",
     version=read_version(),
     description="aio pubsub ",
     long_description="\n\n".join((read("README.rst"), read("CHANGELOG.md"))),
@@ -51,10 +51,11 @@ setup(
     url="https://github.com/daleeg/aio_pubsub",
     license="MIT",
     packages=find_packages(exclude=["docs"]),
-    install_requires=[
-        "aioredis",
-    ],
-    package_data={"aiopubsub": ["py.typed"]},
+    extras_require={
+        # todo: adapt code for aioredis 2.0
+        'redis"': ["aioredis>=1.3.0,<2.0"],
+        'redis2"': ["aioredis>=2.0"],
+    },
     python_requires=">=3.8",
     include_package_data=True,
 )

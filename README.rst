@@ -7,9 +7,9 @@ aio_pubsub
 
 .. code-block:: shell
 
-   pip install aiopubsub
-   pip install aiopubsub[redis]
-   pip install aiopubsub[redis2]
+   pip install aiopubsub-py3
+   pip install aiopubsub-py3[redis]
+   pip install aiopubsub-py3[redis2]
 
 2. 示例
 ==========
