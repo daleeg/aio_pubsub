@@ -1,10 +1,12 @@
 aio_pubsub
 ########
 
+
 1. 安装
 ==========
 
 .. code-block:: shell
+
    pip install aiopubsub
    pip install aiopubsub[redis]
    pip install aiopubsub[redis2]
@@ -15,6 +17,7 @@ aio_pubsub
 - 2.1 发布
 
 .. code-block:: python
+
     from aiopubsub import Pubsub
 
     async def main():
@@ -31,6 +34,7 @@ aio_pubsub
 - 2.2 订阅
 
 .. code-block:: python
+
     from aiopubsub import Pubsub
 
     async def main():
@@ -45,6 +49,7 @@ aio_pubsub
 - 2.3 模糊订阅
 
 .. code-block:: python
+
     from aiopubsub import Pubsub
 
     async def main():
