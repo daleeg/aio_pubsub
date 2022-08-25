@@ -11,7 +11,7 @@ async def main():
 
     async with sub.get_sub() as _sub:
         _conn = await sub.subscribe("foo", _conn=_sub.conn)
-        async for k in sub.listen(_conn):
+        async for k in sub.listen(_conn=_conn):
             print(k)
     await sub.close()
 
