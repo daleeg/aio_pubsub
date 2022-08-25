@@ -29,6 +29,7 @@ class RedisBackend:
         super().__init__(**kwargs)
         self.host = host
         self.port = int(port)
+        self.db=db
         self._loop = loop
         create_connection_timeout = (float(socket_connect_timeout) if socket_connect_timeout else None)
         self.kwargs = {"db": int(db), "password": password,

@@ -6,7 +6,7 @@ import aioredis
 from aiopubsub.base import BasePubsub
 
 
-def init_sub(func):
+def init_pub(func):
     @functools.wraps(func)
     async def wrapper(self, *args, _conn=None, **kwargs):
         if _conn is None:
@@ -18,7 +18,7 @@ def init_sub(func):
     return wrapper
 
 
-def init_pub(func):
+def init_sub(func):
     @functools.wraps(func)
     async def wrapper(self, *args, _conn=None, **kwargs):
         if _conn is None:
@@ -37,6 +37,7 @@ class RedisBackend:
         super().__init__(**kwargs)
         self.host = host
         self.port = int(port)
+        self.db = db
         self._loop = loop
         socket_connect_timeout = (float(socket_connect_timeout) if socket_connect_timeout else None)
         self.kwargs = {"db": int(db), "password": password, "decode_responses": True,
@@ -66,21 +67,21 @@ class RedisBackend:
     async def _release_pub(self, _conn: aioredis.Redis):
         return await _conn.close()
 
-    @init_pub
+    @init_sub
     async def _unsubscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None):
         return await _conn.unsubscribe(channel, *channels)
 
-    @init_pub
+    @init_sub
     async def _subscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None):
         await _conn.subscribe(channel, *channels)
         return _conn
 
-    @init_pub
+    @init_sub
     async def _psubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
         await _conn.psubscribe(pattern, *patterns)
         return _conn
 
-    @init_pub
+    @init_sub
     async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
         return await _conn.punsubscribe(pattern, *patterns)
 
@@ -91,7 +92,7 @@ class RedisBackend:
                 continue
             yield k
 
-    @init_sub
+    @init_pub
     async def _publish(self, channel, message, _conn: aioredis.client.Redis = None):
         return await _conn.publish(channel, message)
 
