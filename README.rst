@@ -21,15 +21,15 @@ aio_pubsub
     from aiopubsub import Pubsub
 
     async def main():
-        pub = Pubsub(Pubsub.REDIS, port=16379)
-        count = await pub.publish("foo1", {"test": 1})
+        pubpub = Pubsub(Pubsub.REDIS, port=16379)
+        count = await pubpub.publish("foo", {"test": 1})
         print(count)
-        async with pub.get_pub() as _pub:
-            count = await pub.publish("foo1", {"test": 2}, _conn=_pub.conn)
+        async with pubpub.get_pub(namespace="cs") as pub:
+            count = await pub.publish("foo", {"test": 2})
             print(count)
-            count = await pub.publish("foo1", {"test": 3}, _conn=_pub.conn)
+            count = await pub.publish("foo", {"test": 3})
             print(count)
-        await pub.close()
+        await pubpub.close()
 
 - 2.2 订阅
 
@@ -38,13 +38,13 @@ aio_pubsub
     from aiopubsub import Pubsub
 
     async def main():
-        sub = Pubsub(Pubsub.REDIS, port=16379)
+        pubsub = Pubsub(Pubsub.REDIS, port=16379)
 
-        async with sub.get_sub() as _sub:
-            _conn = await sub.subscribe("foo", _conn=_sub.conn)
-            async for k in sub.listen(_conn):
+        async with pubsub.get_sub(namespace="cs") as sub:
+            await sub.subscribe("foo")
+            async for k in sub.listen():
                 print(k)
-        await sub.close()
+        await pubsub.close()
 
 - 2.3 模糊订阅
 
@@ -53,12 +53,11 @@ aio_pubsub
     from aiopubsub import Pubsub
 
     async def main():
-        sub = Pubsub(Pubsub.REDIS, port=16379)
-
-        async with sub.get_sub() as _sub:
-            _conn = await sub.psubscribe("foo*", _conn=_sub.conn)
-            async for k in sub.listen(_conn=_conn):
+        pubsub = Pubsub(Pubsub.REDIS, port=16379)
+        async with pubsub.get_sub(namespace="cs") as psub:
+            await psub.psubscribe("foo*")
+            async for k in psub.listen():
                 print(k)
-        await sub.close()
+        await pubsub.close()
 
 

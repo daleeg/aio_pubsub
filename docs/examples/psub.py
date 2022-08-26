@@ -2,18 +2,18 @@ import asyncio
 import sys
 import os
 
-# sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir ))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir ))
 from aiopubsub import Pubsub
 
 
 async def main():
-    sub = Pubsub(Pubsub.REDIS, port=16379)
+    pubsub = Pubsub(Pubsub.REDIS, port=16379)
 
-    async with sub.get_sub() as _sub:
-        _conn = await sub.psubscribe("foo*", _conn=_sub.conn)
-        async for k in sub.listen(_conn=_conn):
+    async with pubsub.get_sub(namespace="cs") as psub:
+        await psub.psubscribe("foo*")
+        async for k in psub.listen():
             print(k)
-    await sub.close()
+    await pubsub.close()
 
 
 if __name__ == '__main__':

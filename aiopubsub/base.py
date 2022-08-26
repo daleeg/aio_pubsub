@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import logging
+from functools import partial
 
 from .serializer import JsonSerializer
 
@@ -38,12 +39,21 @@ class BasePubsub(object):
             return f"{namespace}:{key}"
         if self.namespace is not None:
             return f"{self.namespace}:{key}"
-        return key
+        return f":{key}"
 
-    @process_timeout
-    async def unsubscribe(self, channel, *channels, namespace=None, _conn=None):
-        ns_channels = [self.build_key(c, namespace=namespace) for c in (channel, *channels)]
-        return await self._unsubscribe(*ns_channels, _conn=_conn)
+    def _parser_key(self, key: str, namespace=None):
+        _n, _k = key.split(":", 2)
+        if _n not in ["", namespace, self.namespace]:
+            if namespace and _n != namespace:
+                LOG.warning(f"bad channel: {key} ns:{namespace}")
+            elif self.namespace and _n != self.namespace:
+                LOG.warning(f"bad channel: {key} ns:{self.namespace}")
+            elif _n != "":
+                LOG.warning(f"bad channel: {key}")
+        return _k
+
+    def _parser_pattern(self, pattern: str):
+        return pattern.split(":", 2)[1]
 
     @process_timeout
     async def publish(self, channel, data, dumps_fn=None, namespace=None, _conn=None):
@@ -56,40 +66,48 @@ class BasePubsub(object):
         return ret
 
     @process_timeout
-    async def subscribe(self, channel, *channels, _conn=None, namespace=None):
+    async def subscribe(self, channel, *channels, namespace=None, _conn=None):
         ns_channels = [self.build_key(c, namespace=namespace) for c in (channel, *channels)]
-        return await self._subscribe(*ns_channels, _conn=_conn)
+        await self._subscribe(*ns_channels, _conn=_conn)
 
     @process_timeout
-    async def psubscribe(self, pattern, *patterns, _conn=None, namespace=None):
+    async def unsubscribe(self, channel, *channels, namespace=None, _conn=None):
+        ns_channels = [self.build_key(c, namespace=namespace) for c in (channel, *channels)]
+        return await self._unsubscribe(*ns_channels, _conn=_conn)
+
+    @process_timeout
+    async def psubscribe(self, pattern, *patterns, namespace=None, _conn=None):
         ns_channels = [self.build_key(c, namespace=namespace) for c in (pattern, *patterns)]
-        return await self._psubscribe(*ns_channels, _conn=_conn)
+        await self._psubscribe(*ns_channels, _conn=_conn)
 
     @process_timeout
     async def punsubscribe(self, pattern, *patterns, namespace=None, _conn=None):
         ns_channels = [self.build_key(c, namespace=namespace) for c in (pattern, *patterns)]
         return await self._punsubscribe(*ns_channels, _conn=_conn)
 
-    async def listen(self, loads_fn=None, _conn=None):
+    async def listen(self, loads_fn=None, namespace=None, _conn=None):
         loads = loads_fn or self._serializer.loads
         async for k in self._listen(_conn):
             k["data"] = loads(k["data"])
+            k["channel"] = self._parser_key(k["channel"], namespace)
+            if k["type"] == "pmessage":
+                k["pattern"] = self._parser_pattern(k["pattern"])
             yield k
 
     @process_timeout
-    async def unsubscribe(self, channel, *channels, _conn=None, namespace=None):
+    async def unsubscribe(self, channel, *channels, namespace=None, _conn=None):
         ns_channels = [self.build_key(c, namespace=namespace) for c in (channel, *channels)]
         return await self._unsubscribe(*ns_channels, _conn=_conn)
 
     @process_timeout
-    async def close(self, *args, _conn=None, **kwargs):
-        return await self._close(*args, _conn=_conn, **kwargs)
+    async def close(self, *args, **kwargs):
+        return await self._close(*args, **kwargs)
 
-    def get_pub(self):
-        return _Pub(self)
+    def get_pub(self, namespace=None):
+        return _Pub(self, namespace)
 
-    def get_sub(self):
-        return _Sub(self)
+    def get_sub(self, namespace=None):
+        return _Sub(self, namespace)
 
     async def acquire_sub(self):
         return await self._acquire_sub()
@@ -104,33 +122,42 @@ class BasePubsub(object):
         return await self._release_pub(_conn)
 
 
-class _Pub(object):
-    def __init__(self, _pubsub):
+class BasePubsubEntity(object):
+    __slots__ = ["_pubsub", "_namespace", "_conn"]
+
+    def __init__(self, _pubsub, namespace):
         self._pubsub = _pubsub
-        self.conn = None
+        self._namespace = namespace
+        self._conn = None
+
+    def __getattr__(self, name):
+        if name in self.__slots__:
+            return partial(self._pubsub.__getattribute__(name), namespace=self._namespace, _conn=self._conn)
+        else:
+            return self._pubsub.__getattribute__(name)
+
+
+class _Pub(BasePubsubEntity):
+    __slots__ = [
+        "_pubsub", "_namespace", "_conn", "publish"
+    ]
 
     async def __aenter__(self):
-        self.conn = await self._pubsub.acquire_pub()
+        self._conn = await self._pubsub.acquire_pub()
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._pubsub.release_pub(self.conn)
-
-    def __getattr__(self, name):
-        return self._pubsub.__getattribute__(name)
+        await self._pubsub.release_pub(self._conn)
 
 
-class _Sub(object):
-    def __init__(self, _pubsub):
-        self._pubsub = _pubsub
-        self.conn = None
+class _Sub(BasePubsubEntity):
+    __slots__ = [
+        "_pubsub", "_namespace", "_conn", "subscribe", "unsubscribe", "psubscribe", "punsubscribe", "listen"
+    ]
 
     async def __aenter__(self):
-        self.conn = await self._pubsub.acquire_sub()
+        self._conn = await self._pubsub.acquire_sub()
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._pubsub.release_sub(self.conn)
-
-    def __getattr__(self, name):
-        return self._pubsub.__getattribute__(name)
+        await self._pubsub.release_sub(self._conn)

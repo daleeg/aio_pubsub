@@ -7,15 +7,15 @@ from aiopubsub import Pubsub
 
 
 async def main():
-    pub = Pubsub(Pubsub.REDIS, port=16379)
-    count = await pub.publish("foo1", {"test": 1})
+    pubpub = Pubsub(Pubsub.REDIS, port=16379)
+    count = await pubpub.publish("foo", {"test": 1})
     print(count)
-    async with pub.get_pub() as _pub:
-        count = await pub.publish("foo1", {"test": 2}, _conn=_pub.conn)
+    async with pubpub.get_pub(namespace="cs") as pub:
+        count = await pub.publish("foo", {"test": 2})
         print(count)
-        count = await pub.publish("foo1", {"test": 3}, _conn=_pub.conn)
+        count = await pub.publish("foo", {"test": 3})
         print(count)
-    await pub.close()
+    await pubpub.close()
 
 
 if __name__ == '__main__':

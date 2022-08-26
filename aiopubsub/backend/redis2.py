@@ -1,9 +1,12 @@
 import asyncio
 import functools
+import logging
 
 import aioredis
 
 from aiopubsub.base import BasePubsub
+
+LOG = logging.getLogger(__name__)
 
 
 def init_pub(func):
@@ -73,13 +76,15 @@ class RedisBackend:
 
     @init_sub
     async def _subscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None):
-        await _conn.subscribe(channel, *channels)
-        return _conn
+        sub_channels = channel, *channels
+        ret = await _conn.subscribe(*sub_channels)
+        LOG.info(f"sub: {sub_channels}, ret: {ret}")
 
     @init_sub
     async def _psubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
-        await _conn.psubscribe(pattern, *patterns)
-        return _conn
+        psub_patterns = pattern, *patterns
+        ret = await _conn.psubscribe(*psub_patterns)
+        LOG.info(f"psub: {psub_patterns}, ret: {ret}")
 
     @init_sub
     async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
