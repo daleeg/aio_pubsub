@@ -44,7 +44,6 @@ class RedisBackend:
 
         self.__pool_lock = None
         self._pool: aioredis.ConnectionsPool = None
-        self._mpsc: Receiver = None
 
     @property
     def _pool_lock(self):
@@ -52,22 +51,23 @@ class RedisBackend:
             self.__pool_lock = asyncio.Lock()
         return self.__pool_lock
 
-    async def _acquire_sub(self):
+    async def _acquire_sub(self, receiver: Receiver = None):
         await self._get_pool()
         conn = await self._pool.acquire()
         conn = aioredis.Redis(conn)
-        return conn
+        if not receiver:
+            receiver = Receiver()
+        return conn, receiver
 
-    async def _release_sub(self, _conn: aioredis.Redis):
-        if self._mpsc:
-            channels = [c.decode() for c in self._mpsc.channels.keys()]
+    async def _release_sub(self, _conn: aioredis.Redis, receiver: Receiver):
+        if receiver:
+            channels = [c.decode() for c in receiver.channels.keys()]
             if channels:
                 await _conn.unsubscribe(*channels)
-            patterns = [p.decode() for p in self._mpsc.patterns.keys()]
+            patterns = [p.decode() for p in receiver.patterns.keys()]
             if patterns:
                 await _conn.punsubscribe(*patterns)
-            self._mpsc.stop()
-            self._mpsc = None
+            receiver.stop()
         self._pool.release(_conn.connection)
 
     async def _acquire_pub(self):
@@ -80,39 +80,33 @@ class RedisBackend:
         self._pool.release(_conn.connection)
 
     @init_conn
-    async def _unsubscribe(self, channel, *channels, _conn: aioredis.Redis = None):
+    async def _unsubscribe(self, channel, *channels, _conn: aioredis.Redis = None, receiver: Receiver = None):
         return await _conn.unsubscribe(channel, *channels)
 
-    @property
-    def mpsc(self):
-        if not self._mpsc:
-            self._mpsc = Receiver()
-        return self._mpsc
-
     @init_conn
-    async def _subscribe(self, channel, *channels, _conn: aioredis.Redis = None):
-        sub_channels = [self.mpsc.channel(c) for c in (channel, *channels)]
+    async def _subscribe(self, channel, *channels, _conn: aioredis.Redis = None, receiver: Receiver = None):
+        sub_channels = [receiver.channel(c) for c in (channel, *channels)]
         ret = await _conn.subscribe(*sub_channels)
         LOG.info(f"sub: {sub_channels}, ret: {ret}")
         return
 
     @init_conn
-    async def _psubscribe(self, pattern, *patterns, _conn: aioredis.Redis = None):
-        psub_patterns = [self.mpsc.pattern(p) for p in (pattern, *patterns)]
+    async def _psubscribe(self, pattern, *patterns, _conn: aioredis.Redis = None, receiver: Receiver = None):
+        psub_patterns = [receiver.pattern(p) for p in (pattern, *patterns)]
         ret = await _conn.psubscribe(*psub_patterns)
         LOG.info(f"psub: {psub_patterns}, ret: {ret}")
 
     @init_conn
-    async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.Redis = None):
+    async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.Redis = None, receiver: Receiver = None):
         return await _conn.punsubscribe(pattern, *patterns)
 
-    @property
-    def subscribed(self):
-        return bool(self.mpsc and (self.mpsc.channels or self.mpsc.patterns))
+    @classmethod
+    def subscribed(cls, receiver: Receiver):
+        return bool(receiver and (receiver.channels or receiver.patterns))
 
-    async def _listen(self, _conn: aioredis.Redis = None):
-        while self.subscribed:
-            async for channel, msg in self.mpsc.iter():
+    async def _listen(self, _conn: aioredis.Redis = None, receiver: Receiver = None):
+        while self.subscribed(receiver):
+            async for channel, msg in receiver.iter():
                 if channel.is_pattern:
                     channel_name, data = msg
                     channel_name = channel_name.decode()

@@ -56,11 +56,13 @@ class RedisBackend:
             self.__redis_lock = asyncio.Lock()
         return self.__redis_lock
 
-    async def _acquire_sub(self):
+    async def _acquire_sub(self, _receiver: aioredis.client.PubSub = None):
         await self._get_redis()
-        return self._redis.pubsub()
+        if not _receiver:
+            _receiver = self._redis.pubsub()
+        return _receiver, _receiver
 
-    async def _release_sub(self, _conn: aioredis.client.PubSub):
+    async def _release_sub(self, _conn: aioredis.client.PubSub, receiver):
         return await _conn.reset()
 
     async def _acquire_pub(self):
@@ -71,26 +73,26 @@ class RedisBackend:
         return await _conn.close()
 
     @init_sub
-    async def _unsubscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None):
+    async def _unsubscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None, receiver=None):
         return await _conn.unsubscribe(channel, *channels)
 
     @init_sub
-    async def _subscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None):
+    async def _subscribe(self, channel, *channels, _conn: aioredis.client.PubSub = None, receiver=None):
         sub_channels = channel, *channels
         ret = await _conn.subscribe(*sub_channels)
         LOG.info(f"sub: {sub_channels}, ret: {ret}")
 
     @init_sub
-    async def _psubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
+    async def _psubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None, receiver=None):
         psub_patterns = pattern, *patterns
         ret = await _conn.psubscribe(*psub_patterns)
         LOG.info(f"psub: {psub_patterns}, ret: {ret}")
 
     @init_sub
-    async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None):
+    async def _punsubscribe(self, pattern, *patterns, _conn: aioredis.client.PubSub = None, receiver=None):
         return await _conn.punsubscribe(pattern, *patterns)
 
-    async def _listen(self, _conn: aioredis.client.PubSub = None):
+    async def _listen(self, _conn: aioredis.client.PubSub = None, receiver=None):
         """Listen for messages on channels this client has been subscribed to"""
         async for k in _conn.listen():
             if not k["type"] in ["pmessage", "message"]:

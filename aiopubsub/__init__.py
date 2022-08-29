@@ -3,7 +3,7 @@ from typing import Dict, Type
 
 from .base import BasePubsub
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 def int_or_str(value):
