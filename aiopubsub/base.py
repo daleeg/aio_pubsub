@@ -42,7 +42,7 @@ class BasePubsub(object):
         return f":{key}"
 
     def _parser_key(self, key: str, namespace=None):
-        _n, _k = key.split(":", 2)
+        _n, _k = key.split(":", 1)
         if _n not in ["", namespace, self.namespace]:
             if namespace and _n != namespace:
                 LOG.warning(f"bad channel: {key} ns:{namespace}")
@@ -53,7 +53,7 @@ class BasePubsub(object):
         return _k
 
     def _parser_pattern(self, pattern: str):
-        return pattern.split(":", 2)[1]
+        return pattern.split(":", 1)[1]
 
     @process_timeout
     async def publish(self, channel, data, dumps_fn=None, namespace=None, _conn=None):
