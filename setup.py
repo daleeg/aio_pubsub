@@ -30,6 +30,8 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
     "Operating System :: POSIX",
     "Environment :: Web Environment",
@@ -53,8 +55,7 @@ setup(
     packages=find_packages(exclude=["docs"]),
     extras_require={
         # todo: adapt code for aioredis 2.0
-        'redis"': ["aioredis>=1.3.0,<2.0"],
-        'redis2"': ["aioredis>=2.0"],
+        'redis"': ["redis>=5.0.1"],
     },
     python_requires=">=3.8",
     include_package_data=True,

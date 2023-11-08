@@ -3,19 +3,21 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-from aiopubsub import Pubsub
+from aiopubsub import Pubsub, PubsubRole
+
+
+async def print_msg(channel, msg):
+    print(f"sub msg: {channel} -- {msg}")
 
 
 async def main():
-    pubsub = Pubsub(Pubsub.REDIS, port=16379)
-
-    async with pubsub.get_sub(namespace="cs") as sub:
-        await sub.subscribe("foo")
-        async for k in sub.listen():
+    channels = ["foo"]
+    async with Pubsub(Pubsub.REDIS, port=16379, namespace="cs", role=PubsubRole.SUB) as sub:
+        await sub.subscribe(*channels)
+        async for k in sub.listen(handler=print_msg):
             print(k)
-    await pubsub.close()
+        await sub.unsubscribe(*channels)
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())

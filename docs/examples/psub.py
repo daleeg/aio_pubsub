@@ -1,21 +1,23 @@
 import asyncio
-import sys
 import os
+import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir ))
-from aiopubsub import Pubsub
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+from aiopubsub import Pubsub, PubsubRole
+
+
+async def print_msg(channel, msg):
+    print(f"pmsg: {channel} -- {msg}")
 
 
 async def main():
-    pubsub = Pubsub(Pubsub.REDIS, port=16379)
-
-    async with pubsub.get_sub(namespace="cs") as psub:
-        await psub.psubscribe("foo*")
-        async for k in psub.listen():
+    channels = ["foo*"]
+    async with Pubsub(Pubsub.REDIS, port=16379, namespace="cs", role=PubsubRole.SUB) as psub:
+        await psub.psubscribe(*channels)
+        async for k in psub.listen(handler=print_msg):
             print(k)
-    await pubsub.close()
+        await psub.unsubscribe(*channels)
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())

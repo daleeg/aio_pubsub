@@ -1,9 +1,10 @@
 import logging
 from typing import Dict, Type
 
-from .base import BasePubsub
+from .pubsub import BasePubsub
+from .constant import PubsubRole
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 def int_or_str(value):
@@ -19,14 +20,14 @@ LOG = logging.getLogger(__name__)
 PUBSUB_CACHES: Dict[str, Type[BasePubsub]] = {}
 
 try:
-    import aioredis
+    import redis
 except ImportError:
     LOG.info("aioredis not installed, RedisCache unavailable")
 else:
-    from .backend import RedisPubsub
+    from .pubsub.redis_ import RedisPubsub
 
     PUBSUB_CACHES[RedisPubsub.NAME] = RedisPubsub
-    del aioredis
+    del redis
 
 
 class Pubsub:
@@ -42,5 +43,6 @@ class Pubsub:
 
 
 __all__ = [
-    "Pubsub"
+    "Pubsub",
+    "PubsubRole"
 ]

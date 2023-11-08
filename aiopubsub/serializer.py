@@ -34,3 +34,10 @@ class JsonSerializer(BaseSerializer):
         if value is None:
             return None
         return json.loads(value)
+
+class NoSerializer(BaseSerializer):
+    def dumps(self, value):
+        return value
+
+    def loads(self, value):
+       return value
