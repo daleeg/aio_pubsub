@@ -35,9 +35,10 @@ class JsonSerializer(BaseSerializer):
             return None
         return json.loads(value)
 
+
 class NoSerializer(BaseSerializer):
     def dumps(self, value):
         return value
 
     def loads(self, value):
-       return value
+        return value

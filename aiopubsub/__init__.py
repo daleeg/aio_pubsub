@@ -4,7 +4,7 @@ from typing import Dict, Type
 from .pubsub import BasePubsub
 from .constant import PubsubRole
 
-__version__ = "1.0.6"
+__version__ = "1.0.8"
 
 
 def int_or_str(value):

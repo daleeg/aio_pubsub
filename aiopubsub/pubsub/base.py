@@ -36,6 +36,9 @@ class BasePubsub(object):
         return f"{key}"
 
     def _parser_key(self, key: str, namespace=None):
+        if not namespace:
+            return key
+
         _n, _k = key.split(":", 1)
         if _n not in ["", namespace, self.namespace]:
             if namespace and _n != namespace:
