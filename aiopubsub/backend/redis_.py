@@ -1,5 +1,4 @@
 import asyncio
-import functools
 import logging
 
 import redis.asyncio as aioredis
@@ -11,7 +10,6 @@ from ..decorators import init_sub, init_pub
 LOG = logging.getLogger(__name__)
 
 
-
 class RedisBackend(BaseBackend):
     def __init__(self, host="127.0.0.1", port=6379, db=0, password=None,
                  socket_connect_timeout=None,
@@ -19,13 +17,6 @@ class RedisBackend(BaseBackend):
                  redis_: aioredis.client.Redis = None,
                  pubsub_: aioredis.client.PubSub = None,
                  **kwargs):
-        super().__init__(**kwargs)
-        self.host = host
-        self.port = int(port)
-        self.db = db
-        socket_connect_timeout = (float(socket_connect_timeout) if socket_connect_timeout else None)
-        self.kwargs = {"db": int(db), "password": password, "decode_responses": True,
-                       "socket_connect_timeout": socket_connect_timeout}
 
         self._redis_lock = asyncio.Lock()
         self.role = PubsubRole(role)
@@ -37,6 +28,18 @@ class RedisBackend(BaseBackend):
         elif role == PubsubRole.PUB:
             self.get_client = self._get_redis
             self._client = pubsub_
+        if self._client:
+            kwargs = self._client.connection_pool.connection_kwargs
+            self.host = kwargs["host"]
+            self.port = kwargs["port"]
+            self.kwargs = {"db": kwargs["db"], "password": kwargs["socket_connect_timeout"], "decode_responses": True,
+                           "socket_connect_timeout": kwargs["socket_connect_timeout"]}
+        else:
+            self.host = host
+            self.port = int(port)
+            socket_connect_timeout = (float(socket_connect_timeout) if socket_connect_timeout else None)
+            self.kwargs = {"db": int(db), "password": password, "decode_responses": True,
+                           "socket_connect_timeout": socket_connect_timeout}
 
     def set_role(self, role):
         self.role.set(role)
