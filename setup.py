@@ -43,6 +43,7 @@ classifiers = [
 
 setup(
     name="aiopubsub-py3",
+    author="daleeg",
     version=read_version(),
     description="aio pubsub ",
     long_description="\n\n".join((read("README.rst"), read("CHANGELOG.md"))),
